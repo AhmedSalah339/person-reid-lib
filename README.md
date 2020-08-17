@@ -78,13 +78,13 @@ Video : iLIDS-VID, PRID-2011, LPW, MARS, DukeMTMC-VideoReID
 **2018.12.26**  The initial version is available.
 
 **2018.11.19**  The code for *lib* has been released.
-#### Tutorial
+# Tutorial
 The main which the program starts with is on train_test.py:
 person-reid-lib/tasks/task_video/train_test.py /
 
 It has two main jobs:
 
-## 1- initialising the data manager 
+### 1- initialising the data manager 
 
 ```manager = Manager(cur_dir, seed=None, mode='Train')```
 
@@ -99,7 +99,7 @@ where
 ['iLIDS-VID', 'PRID-2011', 'LPW', 'MARS', 'VIPeR', 'Market1501', 'CUHK03', 'CUHK01', 'DukeMTMCreID', 'GRID', 'DukeMTMC-VideoReID']
            0            1         2      3        4          5           6         7             8           9             10
 ```
-## 2-Creates the solver and running it
+### 2-Creates the solver and running it
 
 The solver is the class which trains and tests the model on the required data set
 
@@ -115,7 +115,7 @@ by default it makes 10 train test tasks which in each it uses a new random split
 
 person-reid-lib/tasks/task_video/solver.py /
 
-The solver has important function that sets options for saving and reusing the model and for saving the search results
+The solver has important function that sets options for saving and reusing the model and for saving the search results and also initialises the net client and the model client which deals with the model.
 
 ```
 def init_options(self):
@@ -128,18 +128,13 @@ def init_options(self):
         self.model_client = ModelClient
 ```
 
-It also initialises the net client and the model client which deals with the model 
-
-
-The solver class inherits from TaskSolverBase which has the real functionality
-
-lib/network/solver_factory/solverbase.py /
+The solver class inherits from TaskSolverBase which has the real functionality lib/network/solver_factory/solverbase.py /
 
 The TaskSolverBase does some important things after initialisation
 
 # 1- sets the data manager
 # 2- sets the evaluator
-
+---
 The run function in this class is what is called to start the train-test task
 
 ```
@@ -163,7 +158,7 @@ The run function in this class is what is called to start the train-test task
 
 it basically creates the network object which is basically sets some variables and returns a netclient object that deals with the model and its forward, back word and evaluation
 
-# Note: The number of cameras and persons is retrieved from the datamanager object (Data) which takes the dataset name  and gets info about it
+### Note: The number of cameras and persons is retrieved from the datamanager object (Data) which takes the dataset name  and gets info about it
 
 
 ## train_test
@@ -191,7 +186,7 @@ basically this is the main train test task which manages the training epochs, wh
 
 the epochs num is advancing in the train function and the chech epoch tells when to stop training and start testing.
 
-# Note: to control epochs num in the folder "self.task_dir / 'test_epoch_id.txt'" the epoch size is the third number (in the code person-reid-lib/lib/utils/manager.py / function check epochs "epoch_size = info_list[2]")
+### Note: to control epochs num in the folder "self.task_dir / 'test_epoch_id.txt'" the epoch size is the third number (in the code person-reid-lib/lib/utils/manager.py / function check epochs "epoch_size = info_list[2]")
 
 train and test functions are basic and easy and dont have much to do with them
 
