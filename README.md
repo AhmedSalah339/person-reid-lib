@@ -79,19 +79,26 @@ Video : iLIDS-VID, PRID-2011, LPW, MARS, DukeMTMC-VideoReID
 
 **2018.11.19**  The code for *lib* has been released.
 # Tutorial
+-[Choose to train or test](#choose-to-train-or-test)
+-[Choose data set](#choose-data-set)
+-[Control the number of task repeating](#control-the-number-of-task-repeating)
+-[Saving and reusing the model](#saving-and-reusing-the-model)
+-[Change epochs num](#change-epochs-num)
+-[Make new dataset](#)
+-[Gets a single prediction](#gets-a-single-prediction)
 The main which the program starts with is on train_test.py:
 person-reid-lib/tasks/task_video/train_test.py /
 
 It has two main jobs:
 
 ### 1- initialising the data manager 
-
+### Choose to train or test
 ```manager = Manager(cur_dir, seed=None, mode='Train')```
 
 The mode has two possiple values 'Train' and 'Test' 
 
 Following that it sets the data set used
-
+### Choose data set
 ``` manager.set_dataset(0)```
 
 where 
@@ -102,7 +109,7 @@ where
 ### 2-Creates the solver and running it
 
 The solver is the class which trains and tests the model on the required data set
-
+#### Control the number of task repeating
 ```
 repeat_times = 10
 for task_i in range(repeat_times):
@@ -116,7 +123,7 @@ by default it makes 10 train test tasks which in each it uses a new random split
 person-reid-lib/tasks/task_video/solver.py /
 
 The solver has important function that sets options for saving and reusing the model and for saving the search results and also initialises the net client and the model client which deals with the model.
-
+#### Saving and reusing the model
 ```
 def init_options(self):
         # ------option------
@@ -185,13 +192,99 @@ The train_test function
 basically this is the main train test task which manages the training epochs, when to stop and start testing and displaying the epochs info
 
 the epochs num is advancing in the train function and the chech epoch tells when to stop training and start testing.
+### Change epochs num
 
-### Note: to control epochs num in the folder "self.task_dir / 'test_epoch_id.txt'" the epoch size is the third number (in the code person-reid-lib/lib/utils/manager.py / function check epochs "epoch_size = info_list[2]")
+### Note: to control epochs num in the folder "self.task_dir / 'test_epoch_id.txt'" the epoch size is the third number 
+### (in the code person-reid-lib/lib/utils/manager.py / function check epochs "epoch_size = info_list[2]")
 
-train and test functions are basic and easy and dont have much to do with them
+train and test functions are basic and easy and dont have much to do with them but the network object is very important.
 
+It is a NetClient object (person-reid-lib/tasks/task_video/architecture.py) contains forward_backward method and eval method which takes a batch of the data and do training epoch or a testing epoch 
 
+(you can find these methods in NetBase class person-reid-lib/lib/network/model_factory/netbase.py /).
 
+The code for the evaluation in the solver base is 
+```
+    def eval(self, network, batch_size):
+        self.evaluator.reset(self.Data.dataset, distance_func=network.model.distance_func)
+        self.evaluator.set_feature_buffer(network.model.fea_process_func)
+        self.logger.info('Test Begin')
+        network.mode = 'Test'
+        self.Data.set_transform(network.model.get_transform())
+        dataloader = self.Data.get_test(batch_size)
+        for i_batch, batch_data in enumerate(dataloader):
+            feature = network.eval(batch_data)
+            self.evaluator.count(feature)
+
+        result = self.evaluator.final_result()
+        return result
+
+    def do_eval(self, network, batch_size):
+        result = self.eval(network, batch_size)
+        cmc = result[0]
+        mAP = result[1]
+        cmc_rank = [float(cmc[0]), float(cmc[4]), float(cmc[9]), float(cmc[19])]
+        return cmc_rank, mAP
+```
+### Get a single response on some images
+
+Basically there are two steps to do so,
+
+#### * Get the features from the model
+
+In which you prepare the data using the data managaer object (Data in this case) and then get the features by using network.eval()
+
+#### * Calculate the distances and take the decision
+
+Which is basically implemented in the evaluator 
+
+It has rules for every dataset to evaluate with
+
+```
+self._eval_factory = {'PRID-2011': EvalStandard,
+                              'iLIDS-VID': EvalStandard,
+                              'MARS': EvalMARS,
+                              'LPW': EvalStandard,
+                              'CUHK01': EvalStandard,
+                              'CUHK03': EvalStandard,
+                              'DukeMTMCreID': EvalStandard,
+                              'GRID': EvalStandard,
+                              'Market1501': EvalStandard,
+                              'VIPeR': EvalStandard,
+                              'DukeMTMC-VideoReID': EvalStandard}
+```
+Only Mars dataset is evaluated differently
+
+In eval_base (person-reid-lib/lib/evaluation/evaluation_rule/eval_base.py)
+
+```
+    def _feature_distance(self, feaMat):
+        probe_feature = torch.index_select(feaMat, dim=0, index=torch.from_numpy(self.probe_index).long().cuda())
+        gallery_feature = torch.index_select(feaMat, dim=0, index=torch.from_numpy(self.gallery_index).long().cuda())
+
+        idx = 0
+        while idx + self.probe_dst_max < self.probe_num:
+            tmp_probe_fea = probe_feature[idx:idx+self.probe_dst_max]
+            dst_pg = self._feature_distance_mini(tmp_probe_fea, gallery_feature)
+            self.distMat[idx:idx+self.probe_dst_max] += dst_pg
+            idx += self.probe_dst_max
+        tmp_probe_fea = probe_feature[idx:self.probe_num]
+        dst_pg = self._feature_distance_mini(tmp_probe_fea, gallery_feature)
+        self.distMat[idx:self.probe_num] += dst_pg
+
+        for i_p, p in enumerate(self.probe_index):
+            for i_g, g in enumerate(self.gallery_index):
+                if self.test_info[p, 0] != self.test_info[g, 0]:
+                    self.avgDiff = self.avgDiff + self.distMat[i_p, i_g]
+                    self.avgDiffCount = self.avgDiffCount + 1
+                elif p != g:
+                    self.avgSame = self.avgSame + self.distMat[i_p, i_g]
+                    self.avgSameCount = self.avgSameCount + 1
+```
+
+Here the code matche the features of all the probe folder and the gallery folder to thier indices and  and then compares betwwen them and uses the test info (the data manager prepares it) to know if the difference in the features is big or not 
+
+this code can be modified to get one feature using the network class and then compares it with the gallery images and get the minimum difference.
 
 #### Related person ReID projects:
 
