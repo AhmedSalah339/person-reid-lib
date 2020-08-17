@@ -139,8 +139,9 @@ The solver class inherits from TaskSolverBase which has the real functionality l
 
 The TaskSolverBase does some important things after initialisation
 
-# 1- sets the data manager
-# 2- sets the evaluator
+### 1- sets the data manager
+Which gets a lot of info from the general manager passed to the solver.
+### 2- sets the evaluator
 ---
 The run function in this class is what is called to start the train-test task
 
