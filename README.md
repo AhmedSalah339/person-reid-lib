@@ -80,12 +80,19 @@ Video : iLIDS-VID, PRID-2011, LPW, MARS, DukeMTMC-VideoReID
 **2018.11.19**  The code for *lib* has been released.
 # Tutorial
 -[Choose to train or test](#choose-to-train-or-test)
+
 -[Choose data set](#choose-data-set)
+
 -[Control the number of task repeating](#control-the-number-of-task-repeating)
+
 -[Saving and reusing the model](#saving-and-reusing-the-model)
+
 -[Change epochs num](#change-epochs-num)
+
 -[Make new dataset](#)
+
 -[Gets a single prediction](#gets-a-single-prediction)
+
 The main which the program starts with is on train_test.py:
 person-reid-lib/tasks/task_video/train_test.py /
 
